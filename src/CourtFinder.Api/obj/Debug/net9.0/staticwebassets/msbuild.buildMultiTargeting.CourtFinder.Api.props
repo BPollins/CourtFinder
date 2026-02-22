@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="../build/CourtFinder.Api.props" />
+</Project>
