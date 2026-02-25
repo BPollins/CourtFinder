@@ -30,6 +30,7 @@ public sealed class CourtAvailabilityService : ICourtAvailabilityService
                 BookingType: court.BookingType,
                 Date: court.Date,
                 Time: court.Time,
+                Price: court.Price,
                 BookingUrl: _lambdaOptions.ProviderOneBookingUrl))
             .ToArray();
 

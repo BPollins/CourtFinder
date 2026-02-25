@@ -48,7 +48,8 @@ CourtFinder/
 {
   "postcode": "SW1A 1AA",
   "date": "2026-03-15",
-  "time": "18:30:00"
+  "time": "18:30:00",
+  "bookingType": "60min"
 }
 ```
 
@@ -63,6 +64,7 @@ CourtFinder/
       "bookingType": "40min",
       "date": "2026-03-15",
       "time": "18:30:00",
+      "price": "£26.00",
       "bookingUrl": "https://provider-one.example.com/book"
     }
   ]

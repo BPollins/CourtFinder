@@ -4,5 +4,6 @@ public sealed record ProviderCourtRecord(
     string FacilityLocation,
     string BookingType,
     DateOnly Date,
-    TimeOnly Time
+    TimeOnly Time,
+    string Price
 );

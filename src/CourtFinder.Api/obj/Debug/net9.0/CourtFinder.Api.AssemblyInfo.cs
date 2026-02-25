@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CourtFinder.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+08f6798c84f39f258356d54f6211d84f72c54f8d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+49b3e416050e476718bc082fb0a460946b76c32a")]
 [assembly: System.Reflection.AssemblyProductAttribute("CourtFinder.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CourtFinder.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

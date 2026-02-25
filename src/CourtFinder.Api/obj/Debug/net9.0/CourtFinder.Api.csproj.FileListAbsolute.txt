@@ -26,3 +26,4 @@
 /Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/obj/Debug/net9.0/CourtFinder.Api.pdb
 /Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/obj/Debug/net9.0/CourtFinder.Api.genruntimeconfig.cache
 /Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/obj/Debug/net9.0/ref/CourtFinder.Api.dll
+/Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/obj/Debug/net9.0/CourtFinder.Api.sourcelink.json

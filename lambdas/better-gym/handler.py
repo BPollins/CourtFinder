@@ -127,6 +127,7 @@ def lambda_handler(event, _context):
                         "bookingType": booking_type,
                         "date": slot.get("date") or date_text,
                         "time": f"{start_24h}:00",
+                        "price": ((slot.get("price") or {}).get("formatted_amount") or ""),
                     }
                 )
 

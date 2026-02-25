@@ -6,5 +6,6 @@ public sealed record AvailableCourt(
     string BookingType,
     DateOnly Date,
     TimeOnly Time,
+    string Price,
     string BookingUrl
 );
