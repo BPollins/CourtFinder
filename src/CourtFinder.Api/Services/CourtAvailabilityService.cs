@@ -27,7 +27,7 @@ public sealed class CourtAvailabilityService : ICourtAvailabilityService
             .Select(court => new AvailableCourt(
                 Provider: "ProviderOne",
                 FacilityLocation: court.FacilityLocation,
-                CourtType: court.CourtType,
+                BookingType: court.BookingType,
                 Date: court.Date,
                 Time: court.Time,
                 BookingUrl: _lambdaOptions.ProviderOneBookingUrl))

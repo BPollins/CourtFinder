@@ -20,6 +20,11 @@ app.MapPost("/api/courts/availability", async (
         return Results.BadRequest(new { error = "Postcode is required." });
     }
 
+    if (string.IsNullOrWhiteSpace(request.BookingType))
+    {
+        return Results.BadRequest(new { error = "BookingType is required." });
+    }
+
     var response = await service.GetAvailableCourtsAsync(request, cancellationToken);
     return Results.Ok(response);
 });

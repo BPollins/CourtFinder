@@ -60,7 +60,7 @@ CourtFinder/
     {
       "provider": "ProviderOne",
       "facilityLocation": "SW1A 1AA Leisure Centre",
-      "courtType": "indoor",
+      "bookingType": "40min",
       "date": "2026-03-15",
       "time": "18:30:00",
       "bookingUrl": "https://provider-one.example.com/book"

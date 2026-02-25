@@ -8,7 +8,7 @@
     "net9.0": []
   },
   "packageFolders": {
-    "/var/folders/0t/cn_67kmx2bx1dd485f_b4pgm0000gn/T/cursor-sandbox-cache/7f2d9451f83586806ebfc61bf44b0e30/nuget": {},
+    "/Users/BenPollins/.nuget/packages/": {},
     "/usr/local/share/dotnet/sdk/NuGetFallbackFolder": {}
   },
   "project": {
@@ -17,7 +17,7 @@
       "projectUniqueName": "/Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/CourtFinder.Api.csproj",
       "projectName": "CourtFinder.Api",
       "projectPath": "/Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/CourtFinder.Api.csproj",
-      "packagesPath": "/var/folders/0t/cn_67kmx2bx1dd485f_b4pgm0000gn/T/cursor-sandbox-cache/7f2d9451f83586806ebfc61bf44b0e30/nuget",
+      "packagesPath": "/Users/BenPollins/.nuget/packages/",
       "outputPath": "/Users/BenPollins/Documents/Coding/CourtFinder/src/CourtFinder.Api/obj/",
       "projectStyle": "PackageReference",
       "fallbackFolders": [

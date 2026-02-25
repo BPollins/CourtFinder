@@ -2,7 +2,7 @@ namespace CourtFinder.Api.Models;
 
 public sealed record ProviderCourtRecord(
     string FacilityLocation,
-    string CourtType,
+    string BookingType,
     DateOnly Date,
     TimeOnly Time
 );
