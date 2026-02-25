@@ -1,6 +1,6 @@
 # CourtFinder
 
-CourtFinder is an API-first application that receives a postcode/date/time request, calls provider-specific AWS Lambda functions, and returns a uniform list of available padel courts with booking links.
+CourtFinder is an API-first application that receives a postcode/date/time request, calls provider-specific AWS Lambda functions, and returns a uniform list of available badminton courts with booking links.
 
 ## Folder structure
 
