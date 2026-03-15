@@ -1,5 +1,55 @@
-lambdas/better-gym/.venv/
-lambdas/better-gym/__pycache__/
-lambdas/better-gym/run_local.py
-lambdas/better-gym/package/*
+# ─── .NET / C# (standard) ─────────────────────────────────────────────
+# Build output and intermediate files
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Aa]rtifacts/
+*.pdb
+*.user
+*.suo
+.vs/
+project.lock.json
+project.fragment.lock.json
+
+# ─── Python (standard) ───────────────────────────────────────────────
+# Bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+# Package/build artifacts
+*.egg-info/
+*.egg
+dist/
+build/
+# Lambda package directory (pip install target)
+lambdas/better-gym/package/
+
+# ─── Lambda deployment ───────────────────────────────────────────────
 **/*.zip
+
+# ─── IDE & OS (standard) ─────────────────────────────────────────────
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Secrets & local config (important for security) ──────────────────
+.env
+.env.local
+*.local
+secrets.json
+
+# ─── Project-specific ───────────────────────────────────────────────
+lambdas/better-gym/run_local.py

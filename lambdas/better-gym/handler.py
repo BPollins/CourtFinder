@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import requests
@@ -71,6 +72,17 @@ def _build_request_headers(centre_slug, booking_type, date_text):
     }
 
 
+BOOKING_BASE_URL = "https://bookings.better.org.uk"
+
+
+def _build_booking_url(centre_slug, activity_slug, date_text, start_24h, end_24h):
+    """Construct direct booking URL for a slot."""
+    return (
+        f"{BOOKING_BASE_URL}/location/{centre_slug}/{activity_slug}/"
+        f"{date_text}/by-time/slot/{start_24h}-{end_24h}"
+    )
+
+
 def _fetch_centre_times(session, centre_slug, booking_type, date_text):
     endpoint = _build_endpoint(centre_slug, booking_type, date_text)
     headers = _build_request_headers(centre_slug, booking_type, date_text)
@@ -79,19 +91,41 @@ def _fetch_centre_times(session, centre_slug, booking_type, date_text):
     return _extract_slots(response.json())
 
 
-def lambda_handler(event, _context):
-    """
-    Expected incoming event:
-    {
-      "postcode": "N1 2AA",
-      "date": "2026-02-24",
-      "time": "14:00:00",
-      "bookingType": "60min"
+def _is_api_gateway_event(event):
+    if not isinstance(event, dict):
+        return False
+    return "requestContext" in event or "httpMethod" in event or "version" in event
+
+
+def _api_response(status_code, payload):
+    return {
+        "statusCode": status_code,
+        "headers": {"content-type": "application/json"},
+        "body": json.dumps(payload),
     }
-    """
-    date_text = event.get("date")
-    time_text = event.get("time")
-    booking_type = _normalise_booking_type(event.get("bookingType"))
+
+
+def _extract_input_payload(event):
+    if not _is_api_gateway_event(event):
+        return event if isinstance(event, dict) else {}
+
+    body = event.get("body")
+    if isinstance(body, str) and body.strip():
+        parsed = json.loads(body)
+        return parsed if isinstance(parsed, dict) else {}
+    if isinstance(body, dict):
+        return body
+
+    params = event.get("queryStringParameters")
+    if isinstance(params, dict):
+        return params
+    return {}
+
+
+def _build_courts(payload):
+    date_text = payload.get("date")
+    time_text = payload.get("time")
+    booking_type = _normalise_booking_type(payload.get("bookingType"))
 
     request_time_hhmm = datetime.strptime(time_text, "%H:%M:%S").strftime("%H:%M")
     request_minutes = _minutes_since_midnight(request_time_hhmm)
@@ -117,6 +151,10 @@ def lambda_handler(event, _context):
                 if not start_24h:
                     continue
 
+                end_24h = ((slot.get("ends_at") or {}).get("format_24_hour") or "").strip() or start_24h
+                slot_date = slot.get("date") or date_text
+                activity_slug = f"badminton-{booking_type}"
+
                 slot_minutes = _minutes_since_midnight(start_24h)
                 if slot_minutes < minimum_minutes or slot_minutes > maximum_minutes:
                     continue
@@ -125,10 +163,28 @@ def lambda_handler(event, _context):
                     {
                         "facilityLocation": centre_slug,
                         "bookingType": booking_type,
-                        "date": slot.get("date") or date_text,
+                        "date": slot_date,
                         "time": f"{start_24h}:00",
                         "price": ((slot.get("price") or {}).get("formatted_amount") or ""),
+                        "url": _build_booking_url(centre_slug, activity_slug, slot_date, start_24h, end_24h),
                     }
                 )
+    return courts
 
-    return {"courts": courts}
+
+def lambda_handler(event, _context):
+    """
+    Expected incoming event:
+    {
+      "postcode": "N1 2AA",
+      "date": "2026-02-24",
+      "time": "14:00:00",
+      "bookingType": "60min"
+    }
+    """
+    try:
+        payload = _extract_input_payload(event)
+        courts = _build_courts(payload)
+        return _api_response(200, {"courts": courts})
+    except (ValueError, TypeError, json.JSONDecodeError) as e:
+        return _api_response(400, {"error": str(e)})

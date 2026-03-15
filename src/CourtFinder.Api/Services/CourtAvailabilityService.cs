@@ -31,7 +31,7 @@ public sealed class CourtAvailabilityService : ICourtAvailabilityService
                 Date: court.Date,
                 Time: court.Time,
                 Price: court.Price,
-                BookingUrl: _lambdaOptions.ProviderOneBookingUrl))
+                BookingUrl: !string.IsNullOrWhiteSpace(court.Url) ? court.Url : _lambdaOptions.ProviderOneBookingUrl))
             .ToArray();
 
         return new CourtAvailabilityResponse(courts);

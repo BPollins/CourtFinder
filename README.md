@@ -65,7 +65,7 @@ CourtFinder/
       "date": "2026-03-15",
       "time": "18:30:00",
       "price": "£26.00",
-      "bookingUrl": "https://provider-one.example.com/book"
+      "bookingUrl": "https://bookings.better.org.uk/location/clissold-leisure-centre/badminton-60min/2026-03-15/by-time/slot/18:30-19:30"
     }
   ]
 }
