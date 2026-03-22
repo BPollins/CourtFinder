@@ -1,0 +1,62 @@
+name: Update Lambda
+
+on:
+  workflow_dispatch:
+    inputs:
+      lambda:
+        description: Lambda package to deploy
+        required: true
+        type: choice
+        options:
+          - better-gym
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.event.inputs.lambda }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lambdas/${{ github.event.inputs.lambda }}
+
+    steps:
+      - name: Set LAMBDA_NAME
+        env:
+          BETTER_GYM_LAMBDA_NAME: ${{ vars.BETTER_GYM_LAMBDA_NAME }}
+        run: |
+          case "${{ github.event.inputs.lambda }}" in
+            better-gym) echo "LAMBDA_NAME=$BETTER_GYM_LAMBDA_NAME" >> "$GITHUB_ENV" ;;
+            *) echo "LAMBDA_NAME=" >> "$GITHUB_ENV" ;;
+          esac
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build deployment package
+        run: |
+          python -m pip install --upgrade pip
+          rm -rf build lambda.zip
+          mkdir -p build
+          pip install -r requirements.txt -t build/
+          cp handler.py build/
+          (cd build && zip -r ../lambda.zip .)
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Update Lambda function code
+        run: |
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_NAME" \
+            --zip-file fileb://lambda.zip

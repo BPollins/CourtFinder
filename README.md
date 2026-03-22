@@ -82,6 +82,21 @@ CourtFinder/
 
 3. Use `src/CourtFinder.Api/CourtFinder.Api.http` to send a request.
 
+## Deploy better-gym Lambda (GitHub Actions)
+
+Workflow: **Update Lambda** (`.github/workflows/update-lambda.yml`). Run it from **Actions → Update Lambda → Run workflow**, choose **Lambda package** (currently only `better-gym`). It zips `lambdas/<choice>/` (dependencies + `handler.py`) and runs `aws lambda update-function-code` against the AWS name from the variable below.
+
+Configure in the repo:
+
+| Type     | Name                       | Purpose                          |
+|----------|----------------------------|----------------------------------|
+| Secret   | `AWS_ACCESS_KEY_ID`        | IAM user/key with `lambda:UpdateFunctionCode` (and read if needed) |
+| Secret   | `AWS_SECRET_ACCESS_KEY`    | Matching secret key              |
+| Variable | `AWS_REGION`               | e.g. `eu-west-2`                 |
+| Variable | `BETTER_GYM_LAMBDA_NAME`   | AWS function name for `better-gym` |
+
+To add another Lambda later: add a folder under `lambdas/`, extend the workflow `options`, add a `case` branch and matching repo variable. Ensure each function’s handler matches its code (e.g. `handler.lambda_handler` for better-gym; Python 3.12 matches the workflow).
+
 ## Next steps
 
 - Add provider two and three Lambda functions with the same output schema.
