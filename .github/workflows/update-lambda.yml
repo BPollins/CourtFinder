@@ -15,24 +15,23 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy ${{ github.event.inputs.lambda }}
+    name: Update ${{ github.event.inputs.lambda }} Lambda
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: lambdas/${{ github.event.inputs.lambda }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set LAMBDA_NAME
         env:
           BETTER_GYM_LAMBDA_NAME: ${{ vars.BETTER_GYM_LAMBDA_NAME }}
         run: |
-          case "${{ github.event.inputs.lambda }}" in
-            better-gym) echo "LAMBDA_NAME=$BETTER_GYM_LAMBDA_NAME" >> "$GITHUB_ENV" ;;
-            *) echo "LAMBDA_NAME=" >> "$GITHUB_ENV" ;;
-          esac
-
-      - name: Checkout
-        uses: actions/checkout@v4
+          if [[ "${{ github.event.inputs.lambda }}" == "better-gym" ]]; then
+            echo "LAMBDA_NAME=$BETTER_GYM_LAMBDA_NAME" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
