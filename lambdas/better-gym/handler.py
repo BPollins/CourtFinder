@@ -10,7 +10,6 @@ CENTRES = [
     "clissold-leisure-centre",
     "swiss-cottage-leisure-centre",
     "hendon-leisure-centre",
-    "kings-cross-fitness",
     "barnet-copthall-leisure-centre",
 ]
 
