@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - better-gym
+          - aggregator
 
   push:
     branches: [main]
@@ -34,10 +35,20 @@ jobs:
       - name: Set LAMBDA_NAME
         env:
           BETTER_GYM_LAMBDA_NAME: ${{ vars.BETTER_GYM_LAMBDA_NAME }}
+          AGGREGATOR_LAMBDA_NAME: ${{ vars.AGGREGATOR_LAMBDA_NAME }}
         run: |
-          if [[ "${{ github.event.inputs.lambda }}" == "better-gym" ]]; then
-            echo "LAMBDA_NAME=$BETTER_GYM_LAMBDA_NAME" >> "$GITHUB_ENV"
-          fi
+          case "${{ github.event.inputs.lambda }}" in
+            better-gym)
+              echo "LAMBDA_NAME=$BETTER_GYM_LAMBDA_NAME" >> "$GITHUB_ENV"
+              ;;
+            aggregator)
+              echo "LAMBDA_NAME=$AGGREGATOR_LAMBDA_NAME" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unknown lambda: ${{ github.event.inputs.lambda }}"
+              exit 1
+              ;;
+          esac
 
       - name: Set up Python
         uses: actions/setup-python@v5
