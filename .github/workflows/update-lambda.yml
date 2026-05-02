@@ -10,6 +10,12 @@ on:
         options:
           - better-gym
 
+  push:
+    branches: [main]
+    paths:
+      - "lambdas/**"
+    
+
 permissions:
   contents: read
 
