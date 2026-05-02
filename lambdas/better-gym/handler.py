@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 import requests
@@ -133,42 +134,61 @@ def _build_courts(payload):
 
     courts = []
     with requests.Session() as session:
-        for centre_slug in CENTRES:
-            try:
-                slots = _fetch_centre_times(session, centre_slug, booking_type, date_text)
-            except requests.RequestException as e:
-                # Continue other centres even if one centre fails.
-                print(f"Error fetching centre times: {e}")
-                continue
-
-            for slot in slots:
-                action = slot.get("action_to_show") or {}
-                if action.get("status") != "BOOK":
-                    continue
-
-                start_24h = ((slot.get("starts_at") or {}).get("format_24_hour") or "").strip()
-                if not start_24h:
-                    continue
-
-                end_24h = ((slot.get("ends_at") or {}).get("format_24_hour") or "").strip() or start_24h
-                slot_date = slot.get("date") or date_text
-                activity_slug = f"badminton-{booking_type}"
-
-                slot_minutes = _minutes_since_midnight(start_24h)
-                if slot_minutes < minimum_minutes or slot_minutes > maximum_minutes:
-                    continue
-
-                courts.append(
-                    {
-                        "facilityLocation": centre_slug,
-                        "bookingType": booking_type,
-                        "date": slot_date,
-                        "time": f"{start_24h}:00",
-                        "price": ((slot.get("price") or {}).get("formatted_amount") or ""),
-                        "url": _build_booking_url(centre_slug, activity_slug, slot_date, start_24h, end_24h),
-                    }
+        with ThreadPoolExecutor(max_workers=len(CENTRES)) as executor:
+            futures = [
+                executor.submit(
+                    _fetch_centre_courts,
+                    session,
+                    centre_slug,
+                    booking_type,
+                    date_text,
+                    minimum_minutes,
+                    maximum_minutes,
                 )
+                for centre_slug in CENTRES
+            ]
+            for future in as_completed(futures):
+                courts.extend(future.result())
     return courts
+
+
+def _fetch_centre_courts(session, centre_slug, booking_type, date_text, minimum_minutes, maximum_minutes):
+    try:
+        slots = _fetch_centre_times(session, centre_slug, booking_type, date_text)
+    except requests.RequestException as e:
+        # Continue other centres even if one centre fails.
+        print(f"Error fetching centre times for {centre_slug}: {e}")
+        return []
+
+    centre_courts = []
+    for slot in slots:
+        action = slot.get("action_to_show") or {}
+        if action.get("status") != "BOOK":
+            continue
+
+        start_24h = ((slot.get("starts_at") or {}).get("format_24_hour") or "").strip()
+        if not start_24h:
+            continue
+
+        end_24h = ((slot.get("ends_at") or {}).get("format_24_hour") or "").strip() or start_24h
+        slot_date = slot.get("date") or date_text
+        activity_slug = f"badminton-{booking_type}"
+
+        slot_minutes = _minutes_since_midnight(start_24h)
+        if slot_minutes < minimum_minutes or slot_minutes > maximum_minutes:
+            continue
+
+        centre_courts.append(
+            {
+                "facilityLocation": centre_slug,
+                "bookingType": booking_type,
+                "date": slot_date,
+                "time": f"{start_24h}:00",
+                "price": ((slot.get("price") or {}).get("formatted_amount") or ""),
+                "url": _build_booking_url(centre_slug, activity_slug, slot_date, start_24h, end_24h),
+            }
+        )
+    return centre_courts
 
 
 def lambda_handler(event, _context):
