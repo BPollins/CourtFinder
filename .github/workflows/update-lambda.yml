@@ -71,10 +71,10 @@ jobs:
             if [[ -z "$changed_lambdas" ]]; then
               matrix="[]"
             else
-              matrix="$(jq -c --argjson live "$live_lambdas" --arg changed "$changed_lambdas" '
-                ($changed | split("\n") | map(select(length > 0))) as $changed_list
-                | [$live[] | select(.lambda as $name | $changed_list | index($name))]
-              ')"
+              matrix="$(jq -c --arg changed "$changed_lambdas" '
+                ($changed | split("\n") | map(select(length > 0))) as $names
+                | map(select(.lambda as $l | ($names | index($l)) != null))
+              ' <<< "$live_lambdas")"
             fi
           fi
 
@@ -86,6 +86,11 @@ jobs:
             echo "debug: changed_lambdas=${changed_lambdas-}"
           fi
           echo "debug: matrix_before_sentinel=${matrix}"
+
+          if [[ -z "$matrix" ]]; then
+            echo "debug: matrix was empty after build; treating as no deploy"
+            matrix="[]"
+          fi
 
           if [[ "$matrix" == "[]" ]]; then
             has_changes=false
