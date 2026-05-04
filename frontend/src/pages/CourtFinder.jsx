@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Search,
   MapPin,
@@ -28,6 +28,10 @@ const BOOKING_TYPES = [
   { value: "40min", label: "40 minutes" },
   { value: "60min", label: "60 minutes" },
 ];
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
+  const value = `${String(hour).padStart(2, "0")}:00`;
+  return { value, label: value };
+});
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
@@ -57,6 +61,7 @@ const formatTime = (raw) => {
 };
 
 const CourtFinder = () => {
+  const dateInputRef = useRef(null);
   const [form, setForm] = useState({
     postcode: "",
     date: todayIsoDate(),
@@ -69,6 +74,15 @@ const CourtFinder = () => {
 
   const handleChange = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
+  };
+
+  const openDatePicker = () => {
+    if (!dateInputRef.current) return;
+    if (typeof dateInputRef.current.showPicker === "function") {
+      dateInputRef.current.showPicker();
+    } else {
+      dateInputRef.current.focus();
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -179,14 +193,27 @@ const CourtFinder = () => {
                   <Calendar className="w-3 h-3 text-cyan-400" />
                   Date
                 </Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={form.date}
-                  onChange={handleChange("date")}
-                  required
-                  className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400"
-                />
+                <div className="relative">
+                  <Input
+                    id="date"
+                    ref={dateInputRef}
+                    type="date"
+                    value={form.date}
+                    onChange={handleChange("date")}
+                    onFocus={openDatePicker}
+                    onClick={openDatePicker}
+                    required
+                    className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={openDatePicker}
+                    aria-label="Open date picker"
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-white"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -197,14 +224,22 @@ const CourtFinder = () => {
                   <Clock className="w-3 h-3 text-cyan-400" />
                   Time
                 </Label>
-                <Input
+                <Select
                   id="time"
-                  type="time"
                   value={form.time}
                   onChange={handleChange("time")}
-                  required
                   className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400"
-                />
+                >
+                  {TIME_OPTIONS.map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      className="bg-gray-900 text-white"
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
               </div>
 
               <div className="space-y-2">
