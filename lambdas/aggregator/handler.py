@@ -7,7 +7,7 @@ from botocore.config import Config
 
 
 _BOTO_CONFIG = Config(
-    retries={"max_attempts": 1, "mode": "standard"},
+    retries={"max_attempts": 2, "mode": "standard"},
     read_timeout=25,
     connect_timeout=5,
 )
