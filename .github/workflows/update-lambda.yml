@@ -76,7 +76,12 @@ jobs:
             fi
           fi
 
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          eof_delim="MATRIX_JSON_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 8)"
+          {
+            echo "matrix<<$eof_delim"
+            printf '%s\n' "$matrix"
+            echo "$eof_delim"
+          } >> "$GITHUB_OUTPUT"
           if [[ "$matrix" == "[]" ]]; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
@@ -90,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+        include: ${{ fromJson(needs.prepare.outputs.matrix == '' && '[]' || needs.prepare.outputs.matrix) }}
     uses: ./.github/workflows/deploy-lambda.yml
     with:
       lambda_path: ${{ matrix.path }}
