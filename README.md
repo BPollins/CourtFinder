@@ -135,6 +135,25 @@ Configure in the repo:
 
 To add another provider later: add a folder under `lambdas/`, extend the workflow `options`, add a `case` branch and matching repo variable, then add the new entry to `PROVIDER_FUNCTIONS` on the aggregator.
 
+### Cross-repo CourtFinder page sync
+
+Workflow: **Sync CourtFinder Page to Portfolio** (`.github/workflows/sync-courtfinder-page.yml`).
+
+This workflow runs on pushes to `main` when `frontend/src/pages/CourtFinder.jsx` changes (and also supports manual dispatch). It copies only that file into `BPollins/portfolio-website` and creates or updates a PR against `main`.
+
+Configure in the `CourtFinder` repo:
+
+| Type   | Name                   | Purpose |
+|--------|------------------------|---------|
+| Secret | `PORTFOLIO_REPO_TOKEN` | Fine-grained PAT with repo access to `BPollins/portfolio-website` and permissions: **Contents (Read and write)** + **Pull requests (Read and write)** |
+
+Validation:
+
+1. Push a change to `frontend/src/pages/CourtFinder.jsx` on `main`.
+2. Confirm the workflow succeeds in `CourtFinder` Actions.
+3. Confirm a PR is opened (or updated) in `BPollins/portfolio-website` targeting `main`.
+4. Confirm the PR diff contains only `frontend/src/pages/CourtFinder.jsx`.
+
 ## Next steps
 
 - Add provider two and three Lambda functions with the same output schema.

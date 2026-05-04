@@ -1,0 +1,50 @@
+name: Sync CourtFinder Page to Portfolio Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/src/pages/CourtFinder.jsx"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CourtFinder
+        uses: actions/checkout@v4
+
+      - name: Checkout portfolio-website
+        uses: actions/checkout@v4
+        with:
+          repository: BPollins/portfolio-website
+          token: ${{ secrets.PORTFOLIO_REPO_TOKEN }}
+          ref: main
+          path: target-repo
+
+      - name: Sync CourtFinder page
+        run: |
+          set -euo pipefail
+          cp "frontend/src/pages/CourtFinder.jsx" "target-repo/frontend/src/pages/CourtFinder.jsx"
+
+      - name: Create pull request in portfolio-website
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.PORTFOLIO_REPO_TOKEN }}
+          path: target-repo
+          commit-message: "sync: update CourtFinder page from CourtFinder repo"
+          branch: "sync/courtfinder-page"
+          delete-branch: true
+          title: "Sync CourtFinder page from CourtFinder repo"
+          body: |
+            Automated sync from `BPollins/CourtFinder`.
+
+            This PR updates:
+            - `frontend/src/pages/CourtFinder.jsx`
+
+            Source commit:
+            - `${{ github.sha }}`
+          base: main
