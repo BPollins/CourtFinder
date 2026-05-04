@@ -4,75 +4,95 @@ on:
   workflow_dispatch:
     inputs:
       lambda:
-        description: Lambda package to deploy
+        description: Lambda package to deploy (or 'all')
         required: true
-        type: choice
-        options:
-          - better-gym
-          - aggregator
+        type: string
 
   push:
     branches: [main]
     paths:
       - "lambdas/**"
-    
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Update ${{ github.event.inputs.lambda }} Lambda
+  prepare:
+    name: Build deploy matrix
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: lambdas/${{ github.event.inputs.lambda }}
-
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has_changes: ${{ steps.matrix.outputs.has_changes }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set LAMBDA_NAME
-        env:
-          BETTER_GYM_LAMBDA_NAME: ${{ vars.BETTER_GYM_LAMBDA_NAME }}
-          AGGREGATOR_LAMBDA_NAME: ${{ vars.AGGREGATOR_LAMBDA_NAME }}
-        run: |
-          case "${{ github.event.inputs.lambda }}" in
-            better-gym)
-              echo "LAMBDA_NAME=$BETTER_GYM_LAMBDA_NAME" >> "$GITHUB_ENV"
-              ;;
-            aggregator)
-              echo "LAMBDA_NAME=$AGGREGATOR_LAMBDA_NAME" >> "$GITHUB_ENV"
-              ;;
-            *)
-              echo "Unknown lambda: ${{ github.event.inputs.lambda }}"
-              exit 1
-              ;;
-          esac
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Detect changed lambda files
+        id: filter
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
         with:
-          python-version: "3.12"
+          list-files: shell
+          filters: |
+            lambdas:
+              - 'lambdas/**'
 
-      - name: Build deployment package
+      - name: Build lambda matrix
+        id: matrix
         run: |
-          python -m pip install --upgrade pip
-          rm -rf build lambda.zip
-          mkdir -p build
-          pip install -r requirements.txt -t build/
-          cp handler.py build/
-          (cd build && zip -r ../lambda.zip .)
+          set -euo pipefail
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          live_lambdas="$(jq -c '.' .github/live_lambdas.json)"
 
-      - name: Update Lambda function code
-        run: |
-          aws lambda update-function-code \
-            --function-name "$LAMBDA_NAME" \
-            --zip-file fileb://lambda.zip
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            selected="${{ github.event.inputs.lambda }}"
+            if [[ "$selected" == "all" ]]; then
+              matrix="$live_lambdas"
+            else
+              matrix="$(jq -c --arg selected "$selected" '[.[] | select(.lambda == $selected)]' <<< "$live_lambdas")"
+              if [[ "$matrix" == "[]" ]]; then
+                echo "Unknown lambda: $selected"
+                echo "Valid values are: all $(jq -r '.[].lambda' .github/live_lambdas.json | sed 's/^/ /')"
+                exit 1
+              fi
+            fi
+          else
+            changed_files='${{ steps.filter.outputs.lambdas_files }}'
+            changed_lambdas="$(
+              for file in $changed_files; do
+                if [[ "$file" == lambdas/*/* ]]; then
+                  echo "$file" | awk -F/ '{print $2}'
+                fi
+              done | sort -u
+            )"
+
+            if [[ -z "$changed_lambdas" ]]; then
+              matrix="[]"
+            else
+              matrix="$(jq -c --argjson live "$live_lambdas" --arg changed "$changed_lambdas" '
+                ($changed | split("\n") | map(select(length > 0))) as $changed_list
+                | [$live[] | select(.lambda as $name | $changed_list | index($name))]
+              ')"
+            fi
+          fi
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [[ "$matrix" == "[]" ]]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Deploy ${{ matrix.lambda }}
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    uses: ./.github/workflows/deploy-lambda.yml
+    with:
+      lambda_path: ${{ matrix.path }}
+      lambda_name: ${{ vars[matrix.lambda_var] }}
+    secrets: inherit

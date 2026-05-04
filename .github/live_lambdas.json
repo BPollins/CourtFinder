@@ -1,0 +1,12 @@
+[
+  {
+    "lambda": "better-gym",
+    "path": "lambdas/better-gym",
+    "lambda_var": "BETTER_GYM_LAMBDA_NAME"
+  },
+  {
+    "lambda": "aggregator",
+    "path": "lambdas/aggregator",
+    "lambda_var": "AGGREGATOR_LAMBDA_NAME"
+  }
+]

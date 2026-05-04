@@ -1,0 +1,55 @@
+name: Deploy Lambda (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      lambda_path:
+        description: Path to lambda directory
+        required: true
+        type: string
+      lambda_name:
+        description: AWS Lambda function name
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.lambda_name }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.lambda_path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build deployment package
+        run: |
+          python -m pip install --upgrade pip
+          rm -rf build lambda.zip
+          mkdir -p build
+          pip install -r requirements.txt -t build/
+          cp handler.py build/
+          (cd build && zip -r ../lambda.zip .)
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Update Lambda function code
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ inputs.lambda_name }}" \
+            --zip-file fileb://lambda.zip
