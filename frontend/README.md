@@ -1,5 +1,7 @@
 # CourtFinder Frontend
 
+Dev-only sandbox for CourtFinder UI iteration. Production CourtFinder is now served from the portfolio repo at `portfolio-website/frontend/src/pages/CourtFinder.jsx` and deployed at [https://benpollins.com/courtfinder](https://benpollins.com/courtfinder).
+
 Single-page React app that lets a user pick a date, location (postcode), time, and booking length, then calls the CourtFinder aggregator Lambda and renders the merged results.
 
 Styled to match the [Ben Pollins portfolio site](https://benpollins.com): dark `bg-gray-950` background, cyan-to-blue gradient accents, monospaced uppercase headings, shadcn-style primitives.
