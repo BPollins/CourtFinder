@@ -205,5 +205,5 @@ def lambda_handler(event, _context):
         payload = _extract_input_payload(event)
         courts = _build_courts(payload)
         return _api_response(200, {"courts": courts})
-    except (ValueError, TypeError, json.JSONDecodeError) as e:
-        return _api_response(400, {"error": str(e)})
+    except (ValueError, TypeError, json.JSONDecodeError) as ex:
+        return _api_response(400, {"error": str(ex)})
