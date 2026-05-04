@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect changed lambda files
         id: filter
@@ -76,17 +78,29 @@ jobs:
             fi
           fi
 
+          echo "debug: event_name=${{ github.event_name }}"
+          echo "debug: filter.lambdas=${{ steps.filter.outputs.lambdas }}"
+          echo "debug: filter.lambdas_files=${{ steps.filter.outputs.lambdas_files }}"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "debug: changed_files=${changed_files-}"
+            echo "debug: changed_lambdas=${changed_lambdas-}"
+          fi
+          echo "debug: matrix_before_sentinel=${matrix}"
+
+          if [[ "$matrix" == "[]" ]]; then
+            has_changes=false
+            matrix='[{"lambda":"__no_deploy__","path":".","lambda_var":"__no_deploy__"}]'
+          else
+            has_changes=true
+          fi
+
           eof_delim="MATRIX_JSON_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 8)"
           {
             echo "matrix<<$eof_delim"
             printf '%s\n' "$matrix"
             echo "$eof_delim"
           } >> "$GITHUB_OUTPUT"
-          if [[ "$matrix" == "[]" ]]; then
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          fi
+          echo "has_changes=$has_changes" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy ${{ matrix.lambda }}
@@ -95,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.prepare.outputs.matrix == '' && '[]' || needs.prepare.outputs.matrix) }}
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     uses: ./.github/workflows/deploy-lambda.yml
     with:
       lambda_path: ${{ matrix.path }}
