@@ -1,48 +1,56 @@
 # CourtFinder
 
-CourtFinder is an API-first application that receives a postcode/date/time request, calls provider-specific AWS Lambda functions, and returns a uniform list of available badminton courts with booking links.
+CourtFinder is a serverless badminton-court availability search. The browser posts a date/location/time/booking-length to an **aggregator Lambda**, which fans out (via `boto3.invoke`) to one provider Lambda per booking system, merges the responses, and returns a uniform list of bookable slots.
+
+## Architecture
+
+```text
+Browser ──► CloudFront ──► S3 (frontend/)              [static React app]
+                       └─► Aggregator Lambda           [boto3 fan-out]
+                              ├─► better-gym Lambda
+                              ├─► provider-2 Lambda    [future]
+                              └─► provider-N Lambda    [future]
+```
+
+Everything sits inside the AWS Always-Free tier for typical portfolio traffic: S3, CloudFront, Lambda Function URLs, and (optionally) API Gateway HTTP API.
 
 ## Folder structure
 
 ```text
 CourtFinder/
-├── CourtFinder.sln
 ├── README.md
-├── src/
-│   └── CourtFinder.Api/
-│       ├── CourtFinder.Api.csproj
-│       ├── Program.cs
-│       ├── appsettings.json
-│       ├── appsettings.Development.json
-│       ├── CourtFinder.Api.http
-│       ├── Models/
-│       │   ├── AvailableCourt.cs
-│       │   ├── CourtAvailabilityRequest.cs
-│       │   ├── CourtAvailabilityResponse.cs
-│       │   ├── ProviderCourtRecord.cs
-│       │   └── ProviderLambdaResponse.cs
-│       ├── Options/
-│       │   └── LambdaOptions.cs
-│       ├── Services/
-│       │   ├── CourtAvailabilityService.cs
-│       │   ├── ICourtAvailabilityService.cs
-│       │   ├── ILambdaInvoker.cs
-│       │   └── LambdaFunctionUrlInvoker.cs
-│       └── Properties/
-│           └── launchSettings.json
-├── lambdas/
-│   └── provider-one/
-│       ├── handler.py
-│       ├── requirements.txt
-│       └── event.sample.json
-└── tests/
-    └── CourtFinder.Api.Tests/
-        └── README.md
+├── frontend/                             # React + Vite + Tailwind UI
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── index.html
+│   ├── .env.example
+│   └── src/
+│       ├── App.jsx
+│       ├── main.jsx
+│       ├── index.css
+│       ├── lib/utils.js
+│       ├── components/
+│       │   ├── Header.jsx
+│       │   ├── Footer.jsx
+│       │   └── ui/                       # shadcn-style primitives
+│       └── pages/CourtFinder.jsx
+└── lambdas/
+    ├── aggregator/                       # fans out via boto3
+    │   ├── handler.py
+    │   ├── requirements.txt
+    │   └── event.sample.json
+    └── better-gym/                       # provider Lambda
+        ├── handler.py
+        ├── requirements.txt
+        └── event.sample.json
 ```
 
-## API request
+## API contract
 
-`POST /api/courts/availability`
+The aggregator Lambda accepts the same shape regardless of whether it's invoked directly, via Lambda Function URL, or via API Gateway.
+
+`POST /` (body)
 
 ```json
 {
@@ -53,52 +61,82 @@ CourtFinder/
 }
 ```
 
-## API response shape
+Response:
 
 ```json
 {
   "courts": [
     {
-      "provider": "ProviderOne",
-      "facilityLocation": "SW1A 1AA Leisure Centre",
-      "bookingType": "40min",
+      "provider": "better-gym",
+      "facilityLocation": "clissold-leisure-centre",
+      "bookingType": "60min",
       "date": "2026-03-15",
       "time": "18:30:00",
       "price": "£26.00",
       "bookingUrl": "https://bookings.better.org.uk/location/clissold-leisure-centre/badminton-60min/2026-03-15/by-time/slot/18:30-19:30"
     }
-  ]
+  ],
+  "errors": []
 }
 ```
 
-## Running locally
+`errors` is a list of `{ provider, error }` entries — partial failure is preferred over a 5xx so the user still sees results from healthy providers.
 
-1. Update `Lambda.ProviderOneFunctionUrl` in `src/CourtFinder.Api/appsettings.Development.json`.
-2. Run the API:
+## Aggregator Lambda
 
-   ```bash
-   dotnet run --project src/CourtFinder.Api
-   ```
+`lambdas/aggregator/handler.py` reads the `PROVIDER_FUNCTIONS` env var and fans out via `boto3.client("lambda").invoke()` in a thread pool.
 
-3. Use `src/CourtFinder.Api/CourtFinder.Api.http` to send a request.
+`PROVIDER_FUNCTIONS` is a comma-separated list of `name=function-name` pairs:
 
-## Deploy better-gym Lambda (GitHub Actions)
+```text
+PROVIDER_FUNCTIONS=better-gym=courtfinder-better-gym,virgin-active=courtfinder-virgin-active
+```
 
-Workflow: **Update Lambda** (`.github/workflows/update-lambda.yml`). Run it from **Actions → Update Lambda → Run workflow**, choose **Lambda package** (currently only `better-gym`). It zips `lambdas/<choice>/` (dependencies + `handler.py`) and runs `aws lambda update-function-code` against the AWS name from the variable below.
+The Lambda's execution role needs `lambda:InvokeFunction` on each provider Lambda's ARN. Recommended hardening: switch every provider Lambda's Function URL `AuthType` to `AWS_IAM` (or remove the URL entirely) so the aggregator is the only thing that can invoke them.
+
+### Local run
+
+```bash
+cd lambdas/aggregator
+pip install boto3            # only needed locally; runtime supplies it
+python run_local.py          # invokes real provider Lambdas via your AWS creds
+```
+
+## Frontend
+
+React + Vite + Tailwind app under `frontend/`. See `frontend/README.md` for full details.
+
+```bash
+cd frontend
+npm install
+cp .env.example .env         # set VITE_COURTFINDER_API_URL
+npm run dev                  # http://localhost:5173
+npm run build                # outputs to frontend/dist/
+```
+
+## Deployment (GitHub Actions)
+
+Workflow: **Update Lambda** (`.github/workflows/update-lambda.yml`). Run it from **Actions → Update Lambda → Run workflow**, then pick the package:
+
+- `better-gym`
+- `aggregator`
+
+It zips `lambdas/<choice>/` (dependencies + `handler.py`) and runs `aws lambda update-function-code` against the function name from the matching repo variable.
 
 Configure in the repo:
 
 | Type     | Name                       | Purpose                          |
 |----------|----------------------------|----------------------------------|
-| Secret   | `AWS_ACCESS_KEY_ID`        | IAM user/key with `lambda:UpdateFunctionCode` (and read if needed) |
+| Secret   | `AWS_ACCESS_KEY_ID`        | IAM user/key with `lambda:UpdateFunctionCode` |
 | Secret   | `AWS_SECRET_ACCESS_KEY`    | Matching secret key              |
 | Variable | `AWS_REGION`               | e.g. `eu-west-2`                 |
 | Variable | `BETTER_GYM_LAMBDA_NAME`   | AWS function name for `better-gym` |
+| Variable | `AGGREGATOR_LAMBDA_NAME`   | AWS function name for the aggregator |
 
-To add another Lambda later: add a folder under `lambdas/`, extend the workflow `options`, add a `case` branch and matching repo variable. Ensure each function’s handler matches its code (e.g. `handler.lambda_handler` for better-gym; Python 3.12 matches the workflow).
+To add another provider later: add a folder under `lambdas/`, extend the workflow `options`, add a `case` branch and matching repo variable, then add the new entry to `PROVIDER_FUNCTIONS` on the aggregator.
 
 ## Next steps
 
 - Add provider two and three Lambda functions with the same output schema.
-- Add tests and a deployment pipeline (API + Lambda + IAM + networking).
-- Add retries/timeouts/circuit-breakers around provider calls.
+- Move provider Function URLs to `AuthType=AWS_IAM` once the aggregator's IAM role is in place.
+- Capture the architecture (S3, CloudFront, Lambdas, IAM) as IaC.

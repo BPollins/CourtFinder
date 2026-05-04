@@ -1,17 +1,3 @@
-# ─── .NET / C# (standard) ─────────────────────────────────────────────
-# Build output and intermediate files
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-[Aa]rtifacts/
-*.pdb
-*.user
-*.suo
-.vs/
-project.lock.json
-project.fragment.lock.json
-
 # ─── Python (standard) ───────────────────────────────────────────────
 # Bytecode and caches
 __pycache__/
@@ -32,7 +18,7 @@ env/
 dist/
 build/
 # Lambda package directory (pip install target)
-lambdas/better-gym/package/
+lambdas/*/package/
 
 # ─── Lambda deployment ───────────────────────────────────────────────
 **/*.zip
@@ -52,4 +38,11 @@ Thumbs.db
 secrets.json
 
 # ─── Project-specific ───────────────────────────────────────────────
-lambdas/better-gym/run_local.py
+lambdas/*/run_local.py
+
+# ─── Frontend (Node) ────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.vite/
+*.log
