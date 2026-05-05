@@ -22,7 +22,20 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 
-const API_URL = import.meta.env.VITE_COURTFINDER_API_URL || "";
+const readEnv = (key) => {
+  try {
+    if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env[key]) {
+      return import.meta.env[key];
+    }
+  } catch (_err) {}
+  if (typeof process !== "undefined" && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  return "";
+};
+
+const API_URL =
+  readEnv("VITE_COURTFINDER_API_URL") || readEnv("REACT_APP_COURTFINDER_API_URL");
 
 const BOOKING_TYPES = [
   { value: "40min", label: "40 minutes" },
@@ -92,7 +105,7 @@ const CourtFinder = () => {
 
     if (!API_URL) {
       setError(
-        "API URL is not configured. Set VITE_COURTFINDER_API_URL in your .env."
+        "VITE_COURTFINDER_API_URL or REACT_APP_COURTFINDER_API_URL not found."
       );
       return;
     }
