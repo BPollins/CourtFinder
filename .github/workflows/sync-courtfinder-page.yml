@@ -17,6 +17,15 @@ jobs:
       - name: Checkout CourtFinder
         uses: actions/checkout@v4
 
+      - name: Capture CourtFinder HEAD commit message
+        id: courtfinder_commit
+        run: |
+          {
+            printf 'message<<COURTFINDER_COMMIT_MSG_EOF\n'
+            git log -1 --pretty=%B
+            printf 'COURTFINDER_COMMIT_MSG_EOF\n'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Checkout portfolio-website
         uses: actions/checkout@v4
         with:
@@ -35,7 +44,8 @@ jobs:
         with:
           token: ${{ secrets.PORTFOLIO_REPO_TOKEN }}
           path: target-repo
-          commit-message: "sync: update CourtFinder page from CourtFinder repo"
+          commit-message: |
+            sync: ${{ steps.courtfinder_commit.outputs.message }}
           branch: "sync/courtfinder-page"
           delete-branch: true
           title: "Sync CourtFinder page from CourtFinder repo"
