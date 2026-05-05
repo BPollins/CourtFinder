@@ -156,7 +156,7 @@ const CourtFinder = () => {
   }, [courts]);
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-gray-800">
       <div className="max-w-6xl mx-auto px-6 py-16 space-y-12">
         <header className="text-center space-y-4">
           <h1 className="text-5xl md:text-6xl font-bold text-white font-mono tracking-wider uppercase">
