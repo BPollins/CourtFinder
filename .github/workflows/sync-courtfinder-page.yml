@@ -48,7 +48,7 @@ jobs:
             sync: ${{ steps.courtfinder_commit.outputs.message }}
           branch: "sync/courtfinder-page"
           delete-branch: true
-          title: "Sync CourtFinder page from CourtFinder repo"
+          title: "CourtFinder Sync: ${{ steps.courtfinder_commit.outputs.message }}"
           body: |
             Automated sync from `BPollins/CourtFinder`.
 
