@@ -185,7 +185,7 @@ const CourtFinder = () => {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label
                   htmlFor="date"
                   className="text-gray-300 font-mono text-xs tracking-wider uppercase flex items-center gap-2"
@@ -193,7 +193,7 @@ const CourtFinder = () => {
                   <Calendar className="w-3 h-3 text-cyan-400" />
                   Date
                 </Label>
-                <div className="relative">
+                <div className="relative min-w-0">
                   <Input
                     id="date"
                     ref={dateInputRef}
@@ -203,7 +203,7 @@ const CourtFinder = () => {
                     onFocus={openDatePicker}
                     onClick={openDatePicker}
                     required
-                    className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400 pr-10"
+                    className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400 pr-10 appearance-none min-w-0 [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:min-h-0 [&::-webkit-date-and-time-value]:leading-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                   />
                   <button
                     type="button"
