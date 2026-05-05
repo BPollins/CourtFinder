@@ -20,7 +20,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
+
+const NATIVE_SELECT_CLASS =
+  "flex h-9 w-full appearance-none rounded-md border bg-gray-950 border-gray-700 text-white px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm pr-9 bg-no-repeat bg-[length:1rem_1rem] bg-[position:right_0.5rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22%239ca3af%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M5.23%207.21a.75.75%200%200%201%201.06.02L10%2011.06l3.71-3.83a.75.75%200%201%201%201.08%201.04l-4.25%204.39a.75.75%200%200%201-1.08%200L5.21%208.27a.75.75%200%200%201%20.02-1.06z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')]";
 
 const readEnv = (key) => {
   try {
@@ -237,11 +239,11 @@ const CourtFinder = () => {
                   <Clock className="w-3 h-3 text-cyan-400" />
                   Time
                 </Label>
-                <Select
+                <select
                   id="time"
                   value={form.time}
                   onChange={handleChange("time")}
-                  className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400"
+                  className={NATIVE_SELECT_CLASS}
                 >
                   {TIME_OPTIONS.map((option) => (
                     <option
@@ -252,7 +254,7 @@ const CourtFinder = () => {
                       {option.label}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -263,11 +265,11 @@ const CourtFinder = () => {
                   <Trophy className="w-3 h-3 text-cyan-400" />
                   Booking length
                 </Label>
-                <Select
+                <select
                   id="bookingType"
                   value={form.bookingType}
                   onChange={handleChange("bookingType")}
-                  className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400"
+                  className={NATIVE_SELECT_CLASS}
                 >
                   {BOOKING_TYPES.map((option) => (
                     <option
@@ -278,7 +280,7 @@ const CourtFinder = () => {
                       {option.label}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
 
               <div className="md:col-span-2 lg:col-span-4 flex justify-end pt-2">
