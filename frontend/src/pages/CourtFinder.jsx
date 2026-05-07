@@ -24,7 +24,40 @@ import { Badge } from "@/components/ui/badge";
 const NATIVE_SELECT_CLASS =
   "flex h-9 w-full appearance-none rounded-md border bg-gray-950 border-gray-700 text-white px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm pr-9 bg-no-repeat bg-[length:1rem_1rem] bg-[position:right_0.5rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22%239ca3af%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M5.23%207.21a.75.75%200%200%201%201.06.02L10%2011.06l3.71-3.83a.75.75%200%201%201%201.08%201.04l-4.25%204.39a.75.75%200%200%201-1.08%200L5.21%208.27a.75.75%200%200%201%20.02-1.06z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')]";
 
-const API_URL = import.meta.env.COURTFINDER_API_URL || "";
+const resolveApiUrl = () => {
+  try {
+    const viteEnv = import.meta && import.meta.env;
+    if (viteEnv && viteEnv.COURTFINDER_API_URL) return viteEnv.COURTFINDER_API_URL;
+  } catch (_) {}
+  try {
+    if (typeof process !== "undefined" && process.env && process.env.COURTFINDER_API_URL) {
+      return process.env.COURTFINDER_API_URL;
+    }
+  } catch (_) {}
+  return "";
+};
+
+const API_URL = resolveApiUrl();
+
+const NATIVE_DATE_STYLES = `
+.cf-native-date {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  color-scheme: dark;
+}
+.cf-native-date::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 0;
+}
+.cf-native-date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0;
+}
+`;
 
 const BOOKING_TYPES = [
   { value: "40min", label: "40 minutes" },
@@ -79,11 +112,19 @@ const CourtFinder = () => {
   };
 
   const openDatePicker = () => {
-    if (!dateInputRef.current) return;
-    if (typeof dateInputRef.current.showPicker === "function") {
-      dateInputRef.current.showPicker();
-    } else {
-      dateInputRef.current.focus();
+    const el = dateInputRef.current;
+    if (!el) return;
+    if (typeof el.showPicker !== "function") {
+      el.focus();
+      return;
+    }
+    try {
+      const result = el.showPicker();
+      if (result && typeof result.catch === "function") {
+        result.catch(() => el.focus());
+      }
+    } catch (_) {
+      el.focus();
     }
   };
 
@@ -142,6 +183,7 @@ const CourtFinder = () => {
 
   return (
     <div className="min-h-screen bg-gray-800">
+      <style>{NATIVE_DATE_STYLES}</style>
       <div className="max-w-6xl mx-auto px-6 py-16 space-y-12">
         <header className="text-center space-y-4">
           <h1 className="text-5xl md:text-6xl font-bold text-white font-mono tracking-wider uppercase">
@@ -200,10 +242,9 @@ const CourtFinder = () => {
                     type="date"
                     value={form.date}
                     onChange={handleChange("date")}
-                    onFocus={openDatePicker}
                     onClick={openDatePicker}
                     required
-                    className="bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400 pr-10 appearance-none min-w-0 [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:min-h-0 [&::-webkit-date-and-time-value]:leading-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                    className="cf-native-date bg-gray-950 border-gray-700 text-white focus-visible:ring-cyan-400 pr-10"
                   />
                   <button
                     type="button"
