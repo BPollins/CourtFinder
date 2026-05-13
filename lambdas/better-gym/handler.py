@@ -57,7 +57,7 @@ def _slug_from_leisure_centre_href(href):
 
 
 def _parse_activity_finder_slugs(html):
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, "html.parser")
     missing_rank_floor = 1_000_000
     rows = []
     for idx, a in enumerate(soup.find_all("a", href=True)):
