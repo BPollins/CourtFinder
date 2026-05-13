@@ -88,7 +88,7 @@ const CourtFinder = () => {
   const [form, setForm] = useState({
     postcode: "",
     date: todayIsoDate(),
-    time: "18:00",
+    time: "12:00",
     bookingType: "60min",
   });
   const [submitting, setSubmitting] = useState(false);
