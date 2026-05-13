@@ -1,21 +1,113 @@
+import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from urllib.parse import quote_plus, urlparse
 
 import requests
+from bs4 import BeautifulSoup
 
-
-CENTRES = [
-    "talacre-community-sports-centre",
-    "sobell-leisure-centre",
-    "clissold-leisure-centre",
-    "swiss-cottage-leisure-centre",
-    "hendon-leisure-centre",
-    "barnet-copthall-leisure-centre",
-]
 
 BETTER_BASE_URL = "https://better-admin.org.uk/api/activities"
 REQUEST_TIMEOUT_SECONDS = 20
+ACTIVITY_FINDER_TIMEOUT_SECONDS = 10
+ACTIVITY_FINDER_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+)
+
+
+class CentresLookupError(Exception):
+    pass
+
+
+def _slug_from_bookings_location_href(href):
+    parsed = urlparse(href)
+    if parsed.netloc.lower() != "bookings.better.org.uk":
+        return None
+    parts = [p for p in parsed.path.split("/") if p]
+    if len(parts) >= 2 and parts[0].lower() == "location":
+        return parts[1]
+    return None
+
+
+def _anchor_activity_finder_rank(a):
+    for key in (
+        "data-data-layer--location-interaction-search-results-position-value",
+        "data-data-layer--location-selected-search-results-position-value",
+    ):
+        raw = a.get(key)
+        if raw is None or not str(raw).strip():
+            continue
+        try:
+            return int(str(raw).strip())
+        except ValueError:
+            continue
+    return None
+
+
+def _slug_from_leisure_centre_href(href):
+    if not href or "/leisure-centre/" not in href:
+        return None
+    parsed = urlparse(href)
+    if "better.org.uk" not in parsed.netloc.lower():
+        return None
+    slug = parsed.path.rstrip("/").split("/")[-1]
+    return slug or None
+
+
+def _parse_activity_finder_slugs(html):
+    soup = BeautifulSoup(html, "lxml")
+    missing_rank_floor = 1_000_000
+    rows = []
+    for idx, a in enumerate(soup.find_all("a", href=True)):
+        href = (a.get("href") or "").strip()
+        slug = _slug_from_bookings_location_href(href)
+        if not slug:
+            continue
+        rank = _anchor_activity_finder_rank(a)
+        sort_key = rank if rank is not None else missing_rank_floor + idx
+        rows.append((sort_key, idx, slug))
+
+    rows.sort(key=lambda t: (t[0], t[1]))
+    ordered = []
+    seen = set()
+    for _, _, slug in rows:
+        if slug not in seen:
+            seen.add(slug)
+            ordered.append(slug)
+            if len(ordered) >= 6:
+                return ordered
+
+    return ordered
+
+
+def _fetch_activity_finder_html(postcode):
+    encoded = quote_plus(postcode.strip())
+    url = f"https://www.better.org.uk/activity-finder?activity=Badminton&postcode={encoded}"
+    headers = {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+        "user-agent": ACTIVITY_FINDER_USER_AGENT,
+    }
+    response = requests.get(url, headers=headers, timeout=ACTIVITY_FINDER_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.text
+
+
+async def get_centres_near_postcode(postcode: str) -> list[str]:
+    def _run():
+        html = _fetch_activity_finder_html(postcode)
+        return _parse_activity_finder_slugs(html)
+
+    try:
+        slugs = await asyncio.to_thread(_run)
+    except requests.RequestException as e:
+        raise CentresLookupError(f"Activity finder request failed: {e}") from e
+
+    if not slugs:
+        raise CentresLookupError("No venue slugs parsed from activity finder HTML.")
+    return slugs
 
 
 def _normalise_booking_type(raw_booking_type):
@@ -42,8 +134,7 @@ def _extract_slots(response_json):
 def _build_endpoint(centre_slug, booking_type, date_text):
     activity_slug = f"badminton-{booking_type}"
     return (
-        f"{BETTER_BASE_URL}/venue/{centre_slug}/activity/"
-        f"{activity_slug}/times?date={date_text}"
+        f"{BETTER_BASE_URL}/venue/{centre_slug}/activity/{activity_slug}/times?date={date_text}"
     )
 
 
@@ -78,8 +169,7 @@ BOOKING_BASE_URL = "https://bookings.better.org.uk"
 def _build_booking_url(centre_slug, activity_slug, date_text, start_24h, end_24h):
     """Construct direct booking URL for a slot."""
     return (
-        f"{BOOKING_BASE_URL}/location/{centre_slug}/{activity_slug}/"
-        f"{date_text}/by-time/slot/{start_24h}-{end_24h}"
+        f"{BOOKING_BASE_URL}/location/{centre_slug}/{activity_slug}/{date_text}/by-time/slot/{start_24h}-{end_24h}"
     )
 
 
@@ -122,7 +212,7 @@ def _extract_input_payload(event):
     return {}
 
 
-def _build_courts(payload):
+def _build_courts(payload, centres):
     date_text = payload.get("date")
     time_text = payload.get("time")
     booking_type = _normalise_booking_type(payload.get("bookingType"))
@@ -134,7 +224,7 @@ def _build_courts(payload):
 
     courts = []
     with requests.Session() as session:
-        with ThreadPoolExecutor(max_workers=len(CENTRES)) as executor:
+        with ThreadPoolExecutor(max_workers=len(centres)) as executor:
             futures = [
                 executor.submit(
                     _fetch_centre_courts,
@@ -145,7 +235,7 @@ def _build_courts(payload):
                     minimum_minutes,
                     maximum_minutes,
                 )
-                for centre_slug in CENTRES
+                for centre_slug in centres
             ]
             for future in as_completed(futures):
                 courts.extend(future.result())
@@ -201,9 +291,24 @@ def lambda_handler(event, _context):
       "bookingType": "60min"
     }
     """
+    postcode = ""
     try:
         payload = _extract_input_payload(event)
-        courts = _build_courts(payload)
+        postcode = (payload.get("postcode") or "").strip()
+        if not postcode:
+            raise ValueError("postcode is required.")
+        centres = asyncio.run(get_centres_near_postcode(postcode))
+        courts = _build_courts(payload, centres)
         return _api_response(200, {"courts": courts})
+    except CentresLookupError:
+        return _api_response(
+            400,
+            {
+                "error": (
+                    f"No badminton centres found near postcode {postcode} — "
+                    "please try a different postcode."
+                )
+            },
+        )
     except (ValueError, TypeError, json.JSONDecodeError) as ex:
         return _api_response(400, {"error": str(ex)})
