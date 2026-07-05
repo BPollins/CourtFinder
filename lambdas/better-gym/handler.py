@@ -134,7 +134,7 @@ def _extract_slots(response_json):
 def _build_endpoint(centre_slug, booking_type, date_text):
     activity_slug = f"badminton-{booking_type}"
     return (
-        f"{BETTER_BASE_URL}/venue/{centre_slug}/activity/{activity_slug}/times?date={date_text}"
+        f"{BETTER_BASE_URL}/venue/{centre_slug}/activity/{activity_slug}/v2/times?date={date_text}"
     )
 
 
